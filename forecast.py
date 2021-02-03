@@ -32,20 +32,21 @@ class Normal:
 
 
 @click.command()
-@click.option('--lower-bound-column', default='Lower')
-@click.option('--upper-bound-column', default='Upper')
-@click.option('--experiment-count', default=10000)
-@click.option('--distribution-function', default='normal')
-@click.option('--triangle-distribution-mode', default=.7)
-def forecast(lower_bound_column, upper_bound_column, experiment_count, distribution_function, triangle_distribution_mode):
-    filename = 'services.xlsx'
+@click.argument('filename', type=click.Path(exists=True))
+@click.option('-l', '--lower-bound-column', 'lower', default='Lower', show_default=True)
+@click.option('-u', '--upper-bound-column', 'upper', default='Upper', show_default=True)
+@click.option('-c', '--experiment-count', 'count', default=10000, type=int, show_default=True)
+@click.option('-f', '--distribution-function', 'function', default='normal', show_default=True)
+@click.option('--td-mode', default=.7, type=float, show_default=True)
+def forecast(filename, lower, upper, count, function, td_mode):
     print(f'Reading {filename} ...')
     data_frame = pd.read_excel(filename, engine='openpyxl')
-    data_frame = pd.DataFrame(data_frame, columns=[lower_bound_column, upper_bound_column])
-    df = Triangle(triangle_distribution_mode) if distribution_function == 'triangle' else Normal()
+    data_frame = pd.DataFrame(data_frame, columns=[lower, upper])
+    data_frame = data_frame.dropna()
+    df = Triangle(td_mode) if function == 'triangle' else Normal()
     print(f'Using {df.name} distribution function for value selection ...')
-    print(f'Running {experiment_count} experiments ...')
-    outcomes = [sum([df.pick(j[1], j[2]) for j in data_frame.itertuples()]) for _ in range(experiment_count)]
+    print(f'Running {count} experiments ...')
+    outcomes = [sum([df.pick(j[1], j[2]) for j in data_frame.itertuples()]) for _ in range(count)]
     summary = pd.DataFrame({'effort': outcomes}).describe(percentiles=[.025, 0.05, 0.075, 0.925, 0.95, .975])
     ci_95_lower = next(summary.filter(regex=r'^2\.5%$', axis=0).itertuples()).effort
     ci_95_upper = next(summary.filter(regex=r'^97\.5%$', axis=0).itertuples()).effort
