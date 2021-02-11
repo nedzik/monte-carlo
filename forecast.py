@@ -12,7 +12,6 @@ from scipy.stats import norm
 
 LOGGING_FORMAT = '''%(asctime)s — %(levelname)s — %(message)s'''
 LOGGING_LEVELS = {
-    0: logging.ERROR,
     1: logging.WARNING,
     2: logging.INFO,
     3: logging.DEBUG
@@ -61,7 +60,6 @@ def read_data_from_excel(filename, sheet_name, lower, upper):
 def run_experiments(data_frame, distribution_function, count, lower, upper, verbose):
     logging.info(f'''Trimming the dataset to '{lower}' and '{upper}' columns ...''')
     data_frame = pd.DataFrame(data_frame, columns=[lower, upper])
-    logging.info(f'''Retained {len(data_frame)} rows.''')
     logging.info(f'''Removing rows with NaN values in the '{lower}' and '{upper}' columns ...''')
     data_frame = data_frame.dropna()
     logging.info(f'''Retained {len(data_frame)} rows.''')
@@ -97,7 +95,7 @@ def split_and_run(data_frame, df, count, split_by, lower, upper, verbose):
         logging.info(f'''Processing group '{key}' ...''')
         outcomes[key] = run_experiments(grouped.get_group(key), df, count, lower, upper, verbose)
     print(f'''95% Confidence Intervals (in days):''')
-    print(f'''Use Case,Lower,Upper''')
+    print(f'''{split_by},{lower},{upper}''')
     for key in sorted(outcomes.keys()):
         _, _, _, _, ci_95_lower, ci_95_upper = extract_results(outcomes[key])
         print(f'''{key},{ci_95_lower:.2f},{ci_95_upper:.2f}''')
@@ -115,15 +113,15 @@ HELP_FUNCTION = '''Distribution function to use (normal, triangle). The default 
 @click.option('-d', '--distribution-function', 'function', default='normal', help=HELP_FUNCTION)
 @click.option('-s', '--sheet_name', help='Sheet name (or the first sheet by default)')
 @click.option('-m', '--triangle-distribution-mode', 'td_mode', default=.7, type=float, show_default=True)
-@click.option('-v', '--verbose', default=2, count=True, show_default=True)
+@click.option('-v', '--verbose', count=True, show_default=True)
 def forecast(filename, split_by, lower, upper, count, function, td_mode, sheet_name, verbose):
-    logging.basicConfig(level=LOGGING_LEVELS.get(verbose, 2), format=LOGGING_FORMAT, datefmt='%H:%M:%S')
+    logging.basicConfig(level=LOGGING_LEVELS[verbose + 1 if verbose else 1], format=LOGGING_FORMAT, datefmt='%H:%M:%S')
     data_frame = read_data_from_excel(filename, sheet_name, lower, upper)
     df = Triangle(td_mode) if function == 'triangle' else Normal()
     if split_by:
-        split_and_run(data_frame, df, count, split_by, lower, upper, verbose)
+        split_and_run(data_frame, df, count, split_by, lower, upper, 1)
     else:
-        print_results(run_experiments(data_frame, df, count, lower, upper, verbose))
+        print_results(run_experiments(data_frame, df, count, lower, upper, verbose + 1))
     logging.info(f'Done.')
 
 
