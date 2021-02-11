@@ -16,7 +16,7 @@ created and activated, install the dependencies:
 pip install -r requrements.txt
 ```
 
-# Help
+## Help
 
 The script takes one required argument, the name of an Excel file. 
 The script supports a number of options. To learn what they are, run:
